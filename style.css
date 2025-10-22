@@ -1,0 +1,85 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    background-color: #000;
+    font-family: sans-serif; /* Font mặc định cho các phần tử khác */
+}
+
+/* Định vị cho cả 2 canvas chồng lên nhau */
+#matrix-container, #galaxy3DCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+}
+
+#matrix-container {
+    z-index: 10; /* Ma trận nằm trên ban đầu */
+    transition: opacity 2s ease-out;
+}
+
+#galaxy3DCanvas {
+    z-index: 1;  /* Dải ngân hà nằm dưới */
+    opacity: 0;  /* Ẩn ban đầu */
+    transition: opacity 0.5s ease-out; /* Thời gian mờ khi chuyển cảnh */
+}
+
+
+/* --- CSS CHO THIỆP SINH NHẬT --- */
+#birthday-card {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    width: 80vw;
+    max-width: 600px;
+    height: 60vh;
+    background: linear-gradient(135deg, #f8cdda 0%, #a0d2eb 100%);
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    padding: 30px;
+    box-sizing: border-box;
+    color: #333;
+    /* QUAN TRỌNG: Ẩn ban đầu */
+    display: none; 
+    opacity: 0;
+    transition: opacity 0.5s ease-in, transform 0.5s ease-in;
+    z-index: 20; /* Nằm trên cùng khi hiện ra */
+    overflow-y: auto;
+    /* Áp dụng font Great Vibes */
+    font-family: 'Great Vibes', cursive;
+    font-size: 1.4em;
+    line-height: 1.6;
+}
+
+#birthday-card.visible {
+    display: block; /* Hiện ra khi có class visible */
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+#birthday-card h2 {
+    text-align: center;
+    color: #e91e63;
+    margin-top: 0;
+    font-size: 2.5em;
+    font-weight: normal;
+}
+
+#birthday-card p {
+     font-size: 1.2em; /* Kích thước chữ cho đoạn văn */
+}
+
+#close-card-button {
+    display: block;
+    margin: 20px auto 0;
+    padding: 10px 20px;
+    background-color: #e91e63;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: sans-serif; /* Dùng font chuẩn cho nút */
+    font-size: 1em; /* Reset kích thước chữ nút */
+}
