@@ -1,26 +1,37 @@
 // --- KHÔNG CÓ LỆNH IMPORT Ở ĐÂY NỮA ---
 
 // --- BIẾN TOÀN CỤC ---
+// THREE và OrbitControls đã có sẵn do tải trong HTML
 let scene, camera, renderer, controls;
 let pointPlanet, disc1, disc2, starField, ambientLights;
 let drawInterval, animationFrameId;
 let birthdayAudio;
 let userInteracted = false; // Chỉ theo dõi tương tác ĐẦU TIÊN
 let giftBox;
-let clock = new THREE.Clock();
+let clock = new THREE.Clock(); // Đồng hồ cho giới hạn FPS
 let delta = 0;
 let interval = 1 / 30; // 30 fps
 let isCardVisible = false; // Thêm biến trạng thái cho thiệp
 
 // --- MẢNG CHỨA CÁC ẢNH CỦA BẠN ---
-const photoUrls = [ /* ... giữ nguyên ... */ ];
+const photoUrls = [
+    'photos/photo1.jpg',
+    'photos/photo2.jpg',
+    'photos/photo3.jpg',
+    'photos/photo4.jpg',
+    'photos/photo5.jpg',
+    'photos/photo6.jpg',
+];
 
 // --- PHẦN KHỞI ĐỘNG CHÍNH ---
 document.addEventListener('DOMContentLoaded', () => {
+    // Khởi tạo audio ngay lập tức
+    setupBackgroundMusic();
     runMatrixEffect();
     // Lắng nghe tương tác đầu tiên để bật nhạc (CHỈ MỘT LẦN)
     document.body.addEventListener('click', handleFirstInteraction, { once: true });
     document.body.addEventListener('touchstart', handleFirstInteraction, { once: true });
+    // Lắng nghe nút đóng thiệp
     const closeButton = document.getElementById('close-card-button');
     if (closeButton) {
         closeButton.addEventListener('click', hideBirthdayCard);
@@ -31,14 +42,143 @@ document.addEventListener('DOMContentLoaded', () => {
 function handleFirstInteraction() {
     if (userInteracted) return;
     userInteracted = true;
-    console.log("User interacted. Initializing and playing audio.");
-    // Khởi tạo và phát nhạc ngay lập tức
-    setupBackgroundMusic(true); // true = cố gắng phát ngay
+    console.log("User interacted. Trying to play music.");
+    // Chỉ cần gọi play() vì audio đã được tạo
+    if (birthdayAudio && birthdayAudio.paused) {
+        birthdayAudio.play().catch(error => {
+            console.error("Error playing audio after interaction:", error);
+        });
+    }
 }
 
 // --- CÁC HÀM CỦA HIỆU ỨNG MA TRẬN ---
-// ... (Giữ nguyên không đổi)
-function runMatrixEffect() { /* ... */ }
+function runMatrixEffect() {
+    const matrixCanvas = document.getElementById('matrixCanvas');
+    if (!matrixCanvas) return;
+    const ctx = matrixCanvas.getContext('2d');
+    const STATE_RAINING = 0, STATE_CONVERGING = 1, STATE_BURSTING = 2;
+    let animationState = STATE_RAINING;
+    const FONT_SIZE = 16;
+    const MATRIX_COLOR = '#0077FF';
+    const MATRIX_FADE_COLOR = 'rgba(0, 0, 0, 0.1)';
+    const TEXT_COLOR = '#0077FF';
+    const TEXT_SHADOW_COLOR = '#0077FF';
+    const WORDS_TO_ANIMATE = ["HAPPY", "BIRTHDAY", "TO", "THANH HÒA"];
+    const REVEAL_SPEED_MS = 40, HOLD_DURATION_MS = 1200, PAUSE_BETWEEN_WORDS_MS = 400;
+    let width = matrixCanvas.width = window.innerWidth;
+    let height = matrixCanvas.height = window.innerHeight;
+    let particles = [];
+    const characters = 'LOVE';
+    for (let i = 0; i < 500; i++) {
+        particles.push({
+            x: Math.random() * width, y: Math.random() * height,
+            char: characters.charAt(Math.floor(Math.random() * characters.length)),
+            speed: Math.random() * 3 + 1, vx: 0, vy: 0, alpha: 1
+        });
+    }
+    let textMask = [], currentWordIndex = 0, revealedPoints = 0, isRevealing = false;
+    function generateTextMask(word) {
+        textMask = [];
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = width; tempCanvas.height = height;
+        const textFontSize = 0.8 * Math.min(width / (word.length * 0.6), height / 2.5);
+        tempCtx.font = `bold ${textFontSize}px sans-serif`;
+        tempCtx.textAlign = 'center'; tempCtx.textBaseline = 'middle';
+        tempCtx.fillStyle = 'white';
+        tempCtx.fillText(word, width / 2, height / 2);
+        const imageData = tempCtx.getImageData(0, 0, width, height);
+        for (let y = 0; y < height; y += FONT_SIZE / 2) {
+            for (let x = 0; x < width; x += FONT_SIZE / 2) {
+                const pIndex = (Math.floor(y) * imageData.width + Math.floor(x)) * 4;
+                if (imageData.data[pIndex] > 128) textMask.push({ x, y });
+            }
+        }
+        textMask.sort(() => Math.random() - 0.5);
+    }
+    function draw() {
+        ctx.fillStyle = MATRIX_FADE_COLOR;
+        ctx.fillRect(0, 0, width, height);
+        ctx.font = `${FONT_SIZE}px monospace`;
+        const centerX = width / 2, centerY = height / 2;
+        let allConverged = true;
+        particles.forEach(p => {
+            switch (animationState) {
+                case STATE_RAINING:
+                    ctx.fillStyle = MATRIX_COLOR;
+                    ctx.fillText(p.char, p.x, p.y);
+                    p.y += p.speed;
+                    if (p.y > height) { p.y = 0; p.x = Math.random() * width; }
+                    break;
+                case STATE_CONVERGING:
+                    let dx = centerX - p.x, dy = centerY - p.y;
+                    p.x += dx * 0.05; p.y += dy * 0.05;
+                    ctx.fillStyle = MATRIX_COLOR;
+                    ctx.fillText(p.char, p.x, p.y);
+                    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) allConverged = false;
+                    break;
+                case STATE_BURSTING:
+                    p.x += p.vx; p.y += p.vy;
+                    p.alpha -= 0.003;
+                    if (p.alpha > 0) {
+                        ctx.fillStyle = `rgba(0, 119, 255, ${p.alpha})`;
+                        ctx.fillText(p.char, p.x, p.y);
+                    }
+                    break;
+            }
+        });
+        if (isRevealing && animationState === STATE_RAINING) {
+            ctx.fillStyle = TEXT_COLOR;
+            ctx.shadowColor = TEXT_SHADOW_COLOR;
+            ctx.shadowBlur = 10;
+            for (let i = 0; i < revealedPoints; i++) {
+                const p = textMask[i];
+                if (p) {
+                    const char = characters.charAt(Math.floor(Math.random() * characters.length));
+                    ctx.fillText(char, p.x, p.y);
+                }
+            }
+            ctx.shadowBlur = 0;
+        }
+        if (animationState === STATE_CONVERGING && allConverged) {
+            animationState = STATE_BURSTING;
+            particles.forEach(p => {
+                p.vx = (Math.random() - 0.5) * 40;
+                p.vy = (Math.random() - 0.5) * 40;
+                p.alpha = 1;
+            });
+            setTimeout(switchToGalaxyScene, 2000);
+        }
+    }
+    function runWordAnimationSequence() {
+        if (currentWordIndex >= WORDS_TO_ANIMATE.length) {
+            isRevealing = false;
+            animationState = STATE_CONVERGING;
+            return;
+        }
+        const word = WORDS_TO_ANIMATE[currentWordIndex];
+        generateTextMask(word);
+        revealedPoints = 0;
+        isRevealing = true;
+        const revealInterval = setInterval(() => {
+            revealedPoints += 20;
+            if (revealedPoints >= textMask.length) {
+                revealedPoints = textMask.length;
+                clearInterval(revealInterval);
+                setTimeout(() => {
+                    isRevealing = false;
+                    setTimeout(() => {
+                        currentWordIndex++;
+                        runWordAnimationSequence();
+                    }, PAUSE_BETWEEN_WORDS_MS);
+                }, HOLD_DURATION_MS);
+            }
+        }, REVEAL_SPEED_MS);
+    }
+    drawInterval = setInterval(draw, 33);
+    setTimeout(runWordAnimationSequence, 2000);
+}
+
 
 // --- HÀM CHUYỂN CẢNH ---
 function switchToGalaxyScene() {
@@ -51,39 +191,46 @@ function switchToGalaxyScene() {
         matrixContainer.style.display = 'none';
         initThreeJS();
         animateThreeJS();
-        galaxyCanvas.style.display = 'block'; // Phải display trước khi fade in
+        galaxyCanvas.style.display = 'block';
         setTimeout(() => galaxyCanvas.style.opacity = '1', 50);
-        // Khởi tạo audio nhưng KHÔNG cố phát nếu chưa có tương tác
-        setupBackgroundMusic(false); 
+        // Không gọi setup audio ở đây nữa
     }, 2000);
 }
 
-// --- HÀM KHỞI TẠO NHẠC (thêm tham số playImmediately) ---
-function setupBackgroundMusic(playImmediately) {
+// --- HÀM KHỞI TẠO NHẠC ---
+function setupBackgroundMusic() {
     if (!birthdayAudio) {
         birthdayAudio = document.createElement('audio');
         birthdayAudio.src = 'eyenoselip.mp3';
         birthdayAudio.loop = true;
         document.body.appendChild(birthdayAudio);
         console.log("Audio element created.");
-        // Chỉ phát nếu được yêu cầu VÀ đã có tương tác
-        if (playImmediately && userInteracted) {
-             birthdayAudio.play().catch(error => {
-                console.error("Error playing audio on setup:", error);
-            });
-        }
-    } else if (playImmediately && userInteracted && birthdayAudio.paused) {
-        // Nếu audio đã có và đang dừng, thử phát lại
-         birthdayAudio.play().catch(error => {
-            console.error("Error resuming audio on setup:", error);
-        });
     }
 }
 
 
 // --- HÀM TẠO TEXTURE HÌNH TRÒN MỜ ---
-// ... (Giữ nguyên)
-function generateSprite(isHalo, color) { /* ... */ }
+function generateSprite(isHalo, color) {
+    const canvas = document.createElement('canvas');
+    canvas.width = isHalo ? 128 : 16;
+    canvas.height = isHalo ? 128 : 16;
+    const context = canvas.getContext('2d');
+    const gradient = context.createRadialGradient(canvas.width / 2, canvas.height / 2, 0, canvas.width / 2, canvas.height / 2, canvas.width / 2);
+    if (isHalo) {
+        gradient.addColorStop(0, `rgba(${color.r*255}, ${color.g*255}, ${color.b*255}, 0.5)`);
+        gradient.addColorStop(0.2, `rgba(${color.r*255}, ${color.g*255}, ${color.b*255}, 0.2)`);
+        gradient.addColorStop(0.4, `rgba(${color.r*255}, ${color.g*255}, ${color.b*255}, 0.05)`);
+        gradient.addColorStop(1, 'rgba(0,0,0,0)');
+    } else {
+        gradient.addColorStop(0, 'rgba(255,255,255,1)');
+        gradient.addColorStop(0.2, 'rgba(0,255,255,1)');
+        gradient.addColorStop(0.4, 'rgba(0,0,64,1)');
+        gradient.addColorStop(1, 'rgba(0,0,0,1)');
+    }
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    return new THREE.CanvasTexture(canvas);
+}
 
 // --- CÁC HÀM CỦA CẢNH 3D ---
 function initThreeJS() {
@@ -146,7 +293,7 @@ function initThreeJS() {
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambientLight);
 
-    const textureLoader = new THREE.TextureLoader(); 
+    const textureLoader = new THREE.TextureLoader();
     disc1 = createDisc(22, 10, 2000, 0, 0.97, textureLoader, 0x8A2BE2);
     disc2 = createDisc(9, 5, 800, 0.2, 1.1, textureLoader, 0x8A2BE2);
     scene.add(disc1);
@@ -194,12 +341,38 @@ function initThreeJS() {
     scene.add(ambientLights);
     window.addEventListener('resize', onWindowResize, false);
     
-    // THÊM: Lắng nghe cả click và touchend
     renderer.domElement.addEventListener('click', handleInteractionEnd, false);
     renderer.domElement.addEventListener('touchend', handleInteractionEnd, false);
 }
-// ... (Hàm createDisc giữ nguyên)
-function createDisc(/* ... */) { /* ... */ }
+// --- HÀM TẠO ĐĨA PHẲNG ---
+function createDisc(outerRadius, innerRadius, particleCount, yPosition, photoChance, textureLoader, defaultParticleColor) {
+    const discGroup = new THREE.Group();
+    let photoIndex = 0;
+    for (let i = 0; i < particleCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.sqrt(Math.random() * (outerRadius**2 - innerRadius**2) + innerRadius**2);
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+        const y = yPosition + (Math.random() - 0.5) * 1.5;
+        if (photoUrls.length > 0 && (Math.random() > photoChance || (i >= particleCount - photoUrls.length && photoIndex < photoUrls.length))) {
+            const photoTexture = textureLoader.load(photoUrls[photoIndex % photoUrls.length]);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: photoTexture });
+            const photoSprite = new THREE.Sprite(spriteMaterial);
+            photoSprite.position.set(x, y, z);
+            photoSprite.scale.set(1.2, 1.2, 1.2);
+            discGroup.add(photoSprite);
+            photoIndex++;
+        } else {
+            const particleGeo = new THREE.SphereGeometry(0.04, 8, 8);
+            let particleColor = (Math.random() < 5/6) ? defaultParticleColor : 0xffffff;
+            const particleMat = new THREE.MeshBasicMaterial({ color: particleColor });
+            const particle = new THREE.Mesh(particleGeo, particleMat);
+            particle.position.set(x, y, z);
+            discGroup.add(particle);
+        }
+    }
+    return discGroup;
+}
 
 
 // --- GIỚI HẠN FPS ---
@@ -226,53 +399,50 @@ function animateThreeJS() {
         }
     }
 }
-// ... (Hàm onWindowResize giữ nguyên)
-function onWindowResize() { /* ... */ }
-
-// --- HÀM XỬ LÝ CLICK/TOUCHEND TRÊN CANVAS 3D ---
-function handleInteractionEnd(event) {
-    // Ngăn chặn hành vi mặc định (ví dụ: cuộn trang trên di động)
-    // event.preventDefault(); 
-    // Tạm thời comment lại preventDefault xem có ảnh hưởng không
-
-    // Nếu thiệp đang hiện thì không làm gì cả
-    if(isCardVisible) return;
-
-    // Lấy tọa độ chạm/click
-    const coords = new THREE.Vector2();
-    if (event.changedTouches) { // Nếu là sự kiện touch
-        coords.x = (event.changedTouches[0].clientX / window.innerWidth) * 2 - 1;
-        coords.y = - (event.changedTouches[0].clientY / window.innerHeight) * 2 + 1;
-    } else { // Nếu là sự kiện click
-        coords.x = (event.clientX / window.innerWidth) * 2 - 1;
-        coords.y = - (event.clientY / window.innerHeight) * 2 + 1;
+// --- HÀM RESIZE ---
+function onWindowResize() {
+    if (camera && renderer) {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
     }
+}
+// --- HÀM CLICK/TOUCH ---
+function handleInteractionEnd(event) {
+    if(isCardVisible) return;
+    const coords = new THREE.Vector2();
+    let clientX, clientY;
+    if (event.changedTouches && event.changedTouches.length > 0) {
+        clientX = event.changedTouches[event.changedTouches.length - 1].clientX;
+        clientY = event.changedTouches[event.changedTouches.length - 1].clientY;
+    } else if (event.clientX !== undefined) {
+        clientX = event.clientX;
+        clientY = event.clientY;
+    } else {
+         return; // Không có tọa độ hợp lệ
+    }
+    coords.x = (clientX / window.innerWidth) * 2 - 1;
+    coords.y = - (clientY / window.innerHeight) * 2 + 1;
 
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(coords, camera);
-    const intersects = raycaster.intersectObject(giftBox);
-
-    if (intersects.length > 0) {
-        showBirthdayCard();
+    if (giftBox) {
+        const intersects = raycaster.intersectObject(giftBox);
+        if (intersects.length > 0) {
+            showBirthdayCard();
+        }
     }
 }
 // --- HÀM HIỆN THIỆP ---
 function showBirthdayCard() {
-    // Ngăn gọi lại nếu thiệp đang hiện
-    if(isCardVisible) return; 
+    if(isCardVisible) return;
     isCardVisible = true;
-
     const galaxyCanvas = document.getElementById('galaxy3DCanvas');
     const birthdayCard = document.getElementById('birthday-card');
     if (!galaxyCanvas || !birthdayCard) return;
-
     if (birthdayAudio) birthdayAudio.pause();
-
-    if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-        animationFrameId = null;
-    } 
-
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
     galaxyCanvas.style.opacity = '0';
     setTimeout(() => {
         galaxyCanvas.style.display = 'none';
@@ -281,8 +451,7 @@ function showBirthdayCard() {
 }
 // --- HÀM ẨN THIỆP ---
 function hideBirthdayCard() {
-    isCardVisible = false; // Cập nhật trạng thái
-
+    isCardVisible = false;
      const galaxyCanvas = document.getElementById('galaxy3DCanvas');
     const birthdayCard = document.getElementById('birthday-card');
     if (!galaxyCanvas || !birthdayCard) return;
@@ -292,11 +461,8 @@ function hideBirthdayCard() {
         galaxyCanvas.style.display = 'block';
         setTimeout(() => {
              galaxyCanvas.style.opacity = '1';
-             if (!animationFrameId) animateThreeJS(); 
-             // KHÔNG tự động phát lại nhạc khi đóng thiệp
-             // if (userInteracted && birthdayAudio) {
-             //     birthdayAudio.play().catch(e => console.error("Error resuming audio:", e));
-             // }
+             if (!animationFrameId) animateThreeJS();
+             // Không tự động phát lại nhạc
         }, 50);
     }, 500);
 }
