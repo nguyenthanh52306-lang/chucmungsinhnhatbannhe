@@ -1,14 +1,14 @@
-// --- Import các module đã được tải trong file HTML ---
+// --- KHÔNG CÓ LỆNH IMPORT Ở ĐÂY ---
 
 // --- BIẾN TOÀN CỤC ---
+// THREE và OrbitControls đã có sẵn do tải trong HTML
 let scene, camera, renderer, controls;
 let pointPlanet, disc1, disc2, starField, ambientLights;
 let drawInterval, animationFrameId;
 let birthdayAudio;
 let userInteracted = false;
 let giftBox;
-// Biến cho việc giới hạn FPS
-let clock = new THREE.Clock();
+let clock = new THREE.Clock(); // Đồng hồ cho giới hạn FPS
 let delta = 0;
 let interval = 1 / 30; // 30 fps
 
@@ -24,16 +24,18 @@ const photoUrls = [
 
 // --- PHẦN KHỞI ĐỘNG CHÍNH ---
 document.addEventListener('DOMContentLoaded', () => {
-    runMatrixEffect();
+    runMatrixEffect(); // Bắt đầu hiệu ứng ma trận
+    // Lắng nghe tương tác để bật nhạc
     document.body.addEventListener('click', handleFirstInteraction, { once: true });
     document.body.addEventListener('touchstart', handleFirstInteraction, { once: true });
+    // Lắng nghe nút đóng thiệp
     const closeButton = document.getElementById('close-card-button');
     if (closeButton) {
         closeButton.addEventListener('click', hideBirthdayCard);
     }
 });
 
-// --- HÀM XỬ LÝ TƯƠNG TÁC ĐẦU TIÊN ---
+// --- HÀM XỬ LÝ TƯƠNG TÁC ĐẦU TIÊN (để bật nhạc) ---
 function handleFirstInteraction() {
     if (userInteracted) return;
     userInteracted = true;
@@ -46,7 +48,6 @@ function handleFirstInteraction() {
 }
 
 // --- CÁC HÀM CỦA HIỆU ỨNG MA TRẬN ---
-// ... (Giữ nguyên không đổi)
 function runMatrixEffect() {
     const matrixCanvas = document.getElementById('matrixCanvas');
     if (!matrixCanvas) return;
@@ -142,13 +143,13 @@ function runMatrixEffect() {
                 p.vy = (Math.random() - 0.5) * 40;
                 p.alpha = 1;
             });
-            setTimeout(switchToGalaxyScene, 2000);
+            setTimeout(switchToGalaxyScene, 2000); // Bắt đầu chuyển cảnh sau khi gộp xong
         }
     }
     function runWordAnimationSequence() {
         if (currentWordIndex >= WORDS_TO_ANIMATE.length) {
             isRevealing = false;
-            animationState = STATE_CONVERGING;
+            animationState = STATE_CONVERGING; // Bắt đầu gộp hạt
             return;
         }
         const word = WORDS_TO_ANIMATE[currentWordIndex];
@@ -161,38 +162,43 @@ function runMatrixEffect() {
                 revealedPoints = textMask.length;
                 clearInterval(revealInterval);
                 setTimeout(() => {
-                    isRevealing = false;
+                    isRevealing = false; // Ẩn chữ hiện tại
                     setTimeout(() => {
                         currentWordIndex++;
-                        runWordAnimationSequence();
+                        runWordAnimationSequence(); // Hiện chữ tiếp theo
                     }, PAUSE_BETWEEN_WORDS_MS);
                 }, HOLD_DURATION_MS);
             }
         }, REVEAL_SPEED_MS);
     }
-    drawInterval = setInterval(draw, 33);
+    // Bắt đầu vòng lặp vẽ ma trận
+    drawInterval = setInterval(draw, 33); // ~30 FPS
+    // Bắt đầu hiện chữ sau 2 giây
     setTimeout(runWordAnimationSequence, 2000);
 }
 
 // --- HÀM CHUYỂN CẢNH ---
-// ... (Giữ nguyên)
 function switchToGalaxyScene() {
     const matrixContainer = document.getElementById('matrix-container');
     const galaxyCanvas = document.getElementById('galaxy3DCanvas');
     if (!matrixContainer || !galaxyCanvas) return;
-    clearInterval(drawInterval);
-    matrixContainer.style.opacity = '0';
+    
+    clearInterval(drawInterval); // Dừng vẽ ma trận
+    matrixContainer.style.opacity = '0'; // Làm mờ ma trận
+    
     setTimeout(() => {
-        matrixContainer.style.display = 'none';
-        initThreeJS();
+        matrixContainer.style.display = 'none'; // Ẩn hẳn ma trận
+        initThreeJS(); // Khởi tạo cảnh 3D
         animateThreeJS(); // Bắt đầu vòng lặp 3D
-        galaxyCanvas.style.opacity = '1';
-        setupBackgroundMusic();
-    }, 2000);
+        galaxyCanvas.style.display = 'block'; // Hiện canvas 3D (vẫn đang trong suốt)
+        setTimeout(() => { // Delay nhỏ để đảm bảo display:block xong
+            galaxyCanvas.style.opacity = '1'; // Làm hiện cảnh 3D
+        }, 50);
+        setupBackgroundMusic(); // Chuẩn bị nhạc
+    }, 2000); // Đợi ma trận mờ xong
 }
 
 // --- HÀM KHỞI TẠO NHẠC ---
-// ... (Giữ nguyên)
 function setupBackgroundMusic() {
     if (!birthdayAudio) {
         birthdayAudio = document.createElement('audio');
@@ -200,6 +206,7 @@ function setupBackgroundMusic() {
         birthdayAudio.loop = true;
         document.body.appendChild(birthdayAudio);
         console.log("Audio element created and ready.");
+        // Nếu người dùng đã tương tác TRƯỚC KHI cảnh 3D hiện ra
         if (userInteracted) {
              birthdayAudio.play().catch(error => {
                 console.error("Error playing audio even after interaction:", error);
@@ -209,7 +216,6 @@ function setupBackgroundMusic() {
 }
 
 // --- HÀM TẠO TEXTURE HÌNH TRÒN MỜ ---
-// ... (Giữ nguyên)
 function generateSprite(isHalo, color) {
     const canvas = document.createElement('canvas');
     canvas.width = isHalo ? 128 : 16;
@@ -229,25 +235,28 @@ function generateSprite(isHalo, color) {
     }
     context.fillStyle = gradient;
     context.fillRect(0, 0, canvas.width, canvas.height);
-    return new THREE.CanvasTexture(canvas);
+    // QUAN TRỌNG: Phải dùng THREE.CanvasTexture vì THREE đã được load global
+    return new THREE.CanvasTexture(canvas); 
 }
 
 // --- CÁC HÀM CỦA CẢNH 3D ---
 function initThreeJS() {
     const canvas = document.getElementById('galaxy3DCanvas');
-    scene = new THREE.Scene();
+    // QUAN TRỌNG: Sử dụng THREE global
+    scene = new THREE.Scene(); 
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.z = 25;
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    // QUAN TRỌNG: Sử dụng THREE.OrbitControls global
+    controls = new THREE.OrbitControls(camera, renderer.domElement); 
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.minDistance = 5;
     controls.maxDistance = 60;
     const planetRadius = 4.5;
-    const planetPoints = 8000;
+    const planetPoints = 5000;
     const planetGeometry = new THREE.BufferGeometry();
     const positions = [], colors = [];
     const color = new THREE.Color();
@@ -271,44 +280,37 @@ function initThreeJS() {
     });
     pointPlanet = new THREE.Points(planetGeometry, planetMaterial);
     scene.add(pointPlanet);
-    // --- TẠO HỘP QUÀ VỚI TEXTURE ---
-    const giftTextureLoader = new THREE.TextureLoader(); // Tạo loader riêng để tránh nhầm lẫn
+
+    const giftTextureLoader = new THREE.TextureLoader();
     const wrapTexture = giftTextureLoader.load('wrapping_paper.jpg');
     const ribbonTexture = giftTextureLoader.load('ribbon.jpg');
-
     wrapTexture.wrapS = THREE.RepeatWrapping;
     wrapTexture.wrapT = THREE.RepeatWrapping;
     wrapTexture.repeat.set(2, 2);
-
-    // Dùng MeshPhongMaterial để phản ứng với ánh sáng
     const boxMaterials = [
-        new THREE.MeshPhongMaterial({ map: wrapTexture }), // right
-        new THREE.MeshPhongMaterial({ map: wrapTexture }), // left
-        new THREE.MeshPhongMaterial({ map: ribbonTexture }),// top (mặt có nơ)
-        new THREE.MeshPhongMaterial({ map: wrapTexture }), // bottom
-        new THREE.MeshPhongMaterial({ map: wrapTexture }), // front
-        new THREE.MeshPhongMaterial({ map: wrapTexture })  // back
+        new THREE.MeshPhongMaterial({ map: wrapTexture }), new THREE.MeshPhongMaterial({ map: wrapTexture }),
+        new THREE.MeshPhongMaterial({ map: ribbonTexture }), new THREE.MeshPhongMaterial({ map: wrapTexture }),
+        new THREE.MeshPhongMaterial({ map: wrapTexture }), new THREE.MeshPhongMaterial({ map: wrapTexture })
     ];
-
     const boxGeometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
     giftBox = new THREE.Mesh(boxGeometry, boxMaterials);
     giftBox.name = "giftBox";
     scene.add(giftBox);
-
-    // Thêm ánh sáng để thấy vật liệu Phong (Quan trọng)
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(1, 1, 1);
     scene.add(directionalLight);
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); // Có thể tăng nhẹ ambient
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambientLight);
-    const textureLoader = new THREE.TextureLoader();
-    disc1 = createDisc(22, 10, 2500, 0, 0.94, textureLoader, 0x8A2BE2);
-    disc2 = createDisc(9, 5, 1000, 0.2, 1.1, textureLoader, 0x8A2BE2);
+
+    const textureLoader = new THREE.TextureLoader(); // Có thể dùng chung loader
+    disc1 = createDisc(22, 10, 2000, 0, 0.96, textureLoader, 0x8A2BE2);
+    disc2 = createDisc(9, 5, 800, 0.2, 1.1, textureLoader, 0x8A2BE2);
     scene.add(disc1);
     scene.add(disc2);
+    
     const starGeometry = new THREE.BufferGeometry();
     const starPositions = [];
-    for (let i = 0; i < 3000; i++) {
+    for (let i = 0; i < 2000; i++) {
         const radius = Math.random() * 200 + 50;
         const theta = 2 * Math.PI * Math.random();
         const phi = Math.acos(2 * Math.random() - 1);
@@ -321,6 +323,7 @@ function initThreeJS() {
     const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.2 });
     starField = new THREE.Points(starGeometry, starMaterial);
     scene.add(starField);
+    
     ambientLights = new THREE.Group();
     const lightColors = [new THREE.Color(0xADD8E6), new THREE.Color(0x9370DB), new THREE.Color(0x87CEEB)];
     for (let i = 0; i < 7; i++) {
@@ -348,8 +351,9 @@ function initThreeJS() {
     window.addEventListener('resize', onWindowResize, false);
     renderer.domElement.addEventListener('click', onCanvasClick, false);
 }
-// ... (Hàm createDisc giữ nguyên)
+// --- HÀM TẠO ĐĨA PHẲNG ---
 function createDisc(outerRadius, innerRadius, particleCount, yPosition, photoChance, textureLoader, defaultParticleColor) {
+    // QUAN TRỌNG: Sử dụng THREE global
     const discGroup = new THREE.Group();
     let photoIndex = 0;
     for (let i = 0; i < particleCount; i++) {
@@ -379,30 +383,31 @@ function createDisc(outerRadius, innerRadius, particleCount, yPosition, photoCha
 }
 
 
-// --- THAY ĐỔI: Giới hạn FPS ---
+// --- GIỚI HẠN FPS ---
 function animateThreeJS() {
     animationFrameId = requestAnimationFrame(animateThreeJS);
-
     delta += clock.getDelta();
-
     if (delta > interval) {
-        // Chỉ cập nhật và render nếu đủ thời gian đã trôi qua
-        if (pointPlanet) pointPlanet.rotation.y += 0.002 * (delta / interval); // Điều chỉnh tốc độ theo delta
-        if (disc1) disc1.rotation.y -= 0.01 * (delta / interval);
-        if (disc2) disc2.rotation.y -= 0.02 * (delta / interval);
-        if (starField) starField.rotation.y += 0.0001 * (delta / interval);
-        if (ambientLights) {
-            ambientLights.rotation.y += 0.0002 * (delta / interval);
-            ambientLights.rotation.z += 0.0001 * (delta / interval);
+        try {
+            if (pointPlanet) pointPlanet.rotation.y += 0.002 * (delta / interval);
+            if (giftBox) giftBox.rotation.y += 0.002 * (delta / interval);
+            if (disc1) disc1.rotation.y -= 0.01 * (delta / interval);
+            if (disc2) disc2.rotation.y -= 0.02 * (delta / interval);
+            if (starField) starField.rotation.y += 0.0001 * (delta / interval);
+            if (ambientLights) {
+                ambientLights.rotation.y += 0.0002 * (delta / interval);
+                ambientLights.rotation.z += 0.0001 * (delta / interval);
+            }
+            controls.update();
+            renderer.render(scene, camera);
+            delta = delta % interval;
+        } catch (error) {
+            console.error("Error during animateThreeJS:", error);
+            cancelAnimationFrame(animationFrameId);
         }
-        
-        controls.update(); // Cập nhật controls
-        renderer.render(scene, camera); // Render cảnh
-
-        delta = delta % interval; // Reset delta
     }
 }
-// ... (Các hàm còn lại giữ nguyên)
+// --- HÀM RESIZE ---
 function onWindowResize() {
     if (camera && renderer) {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -410,47 +415,33 @@ function onWindowResize() {
         renderer.setSize(window.innerWidth, window.innerHeight);
     }
 }
+// --- HÀM CLICK ---
 function onCanvasClick(event) {
-    console.log("Canvas clicked!");
-    const mouse = new THREE.Vector2();
+    const mouse = new THREE.Vector2(); // Sử dụng THREE global
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
-    const raycaster = new THREE.Raycaster();
+    const raycaster = new THREE.Raycaster(); // Sử dụng THREE global
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObject(giftBox);
-    console.log("Intersects:", intersects);
     if (intersects.length > 0) {
-        console.log("Gift box clicked!");
         showBirthdayCard();
-    } else {
-        console.log("Did not click the gift box.");
     }
 }
+// --- HÀM HIỆN THIỆP ---
 function showBirthdayCard() {
-    console.log("showBirthdayCard function called!");
     const galaxyCanvas = document.getElementById('galaxy3DCanvas');
     const birthdayCard = document.getElementById('birthday-card');
-    if (!galaxyCanvas || !birthdayCard) {
-        console.error("Canvas or Card element not found!");
-        return;
-    }
-    if (birthdayAudio) {
-        birthdayAudio.pause();
-    }
-    if (animationFrameId) {
-        console.log("Cancelling animation frame:", animationFrameId);
-        cancelAnimationFrame(animationFrameId);
-        animationFrameId = null;
-    } else {
-        console.warn("animationFrameId is not set, cannot cancel animation.");
-    }
+    if (!galaxyCanvas || !birthdayCard) return;
+    if (birthdayAudio) birthdayAudio.pause();
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    animationFrameId = null; // Reset để biết animation đã dừng
     galaxyCanvas.style.opacity = '0';
     setTimeout(() => {
         galaxyCanvas.style.display = 'none';
         birthdayCard.classList.add('visible');
-        console.log("Birthday card should be visible now.");
     }, 500);
 }
+// --- HÀM ẨN THIỆP ---
 function hideBirthdayCard() {
      const galaxyCanvas = document.getElementById('galaxy3DCanvas');
     const birthdayCard = document.getElementById('birthday-card');
@@ -461,9 +452,8 @@ function hideBirthdayCard() {
         galaxyCanvas.style.display = 'block';
         setTimeout(() => {
              galaxyCanvas.style.opacity = '1';
-             if (!animationFrameId) {
-                 animateThreeJS();
-             }
+             // Chỉ gọi animate nếu nó chưa chạy
+             if (!animationFrameId) animateThreeJS(); 
              if (userInteracted && birthdayAudio) {
                  birthdayAudio.play().catch(e => console.error("Error resuming audio:", e));
              }
